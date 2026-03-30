@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db, auth, handleFirestoreError, OperationType, collection, addDoc, serverTimestamp } from '../lib/firebase';
+import { db, auth, storage, ref, uploadBytes, getDownloadURL, handleFirestoreError, OperationType, collection, addDoc, serverTimestamp } from '../lib/firebase';
 import { 
   Camera, 
   MapPin, 
@@ -110,7 +110,12 @@ export const SubmitEvidenceView = () => {
 
     setIsAnalyzing(true);
     try {
-      // 1. Convert file to base64 for Gemini
+      // 1. Upload to Firebase Storage
+      const storageRef = ref(storage, `evidence/${auth.currentUser.uid}/${Date.now()}_${selectedFile.name}`);
+      const uploadResult = await uploadBytes(storageRef, selectedFile);
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
+
+      // 2. Convert file to base64 for Gemini (Backend expects base64 for now, but we'll store the URL)
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve) => {
         reader.onload = () => resolve(reader.result as string);
@@ -118,7 +123,7 @@ export const SubmitEvidenceView = () => {
       });
       const base64Data = await base64Promise;
 
-      // 2. Call Verify API (Gemini)
+      // 3. Call Verify API (Gemini)
       const idToken = await auth.currentUser.getIdToken();
       const verifyRes = await fetch('/api/verify', {
         method: 'POST',
@@ -129,6 +134,7 @@ export const SubmitEvidenceView = () => {
         body: JSON.stringify({
           evidence_id: `ev_${Date.now()}`,
           image_data: base64Data,
+          storage_url: downloadUrl,
           project_type: projectType,
           description: metadata
         })
@@ -137,7 +143,7 @@ export const SubmitEvidenceView = () => {
       if (!verifyRes.ok) throw new Error(verifyData.error || "Verification failed");
       setVerificationResult(verifyData.verification);
 
-      // 3. Call PoI Generate API
+      // 4. Call PoI Generate API
       const poiRes = await fetch('/api/poi/generate', {
         method: 'POST',
         headers: { 
@@ -147,7 +153,8 @@ export const SubmitEvidenceView = () => {
         body: JSON.stringify({
           evidence_id: verifyData.evidence_id,
           verification: verifyData.verification,
-          metadata: metadata
+          metadata: metadata,
+          storage_url: downloadUrl
         })
       });
       const poiData = await poiRes.json();
