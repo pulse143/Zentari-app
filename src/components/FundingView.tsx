@@ -54,7 +54,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-const ProjectAllocationCard = ({ project, onSelect, onView }: any) => (
+const ProjectAllocationCard = ({ project, onSelect }: any) => (
   <div className="p-8 border border-brand-border rounded-[2.5rem] bg-white/[0.01] space-y-8 group hover:bg-white/[0.02] transition-all cursor-pointer">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
@@ -111,24 +111,16 @@ const ProjectAllocationCard = ({ project, onSelect, onView }: any) => (
       ))}
     </div>
 
-    <div className="flex gap-3">
-      <button 
-        onClick={() => onSelect(project)}
-        className="flex-1 py-4 bg-white/5 border border-white/10 rounded-2xl font-bold uppercase tracking-widest text-[10px] group-hover:bg-brand-paper group-hover:text-brand-ink transition-all"
-      >
-        Allocate Capital
-      </button>
-      <button 
-        onClick={() => onView?.(project)}
-        className="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all"
-      >
-        View Details
-      </button>
-    </div>
+    <button 
+      onClick={() => onSelect(project)}
+      className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl font-bold uppercase tracking-widest text-[10px] group-hover:bg-brand-paper group-hover:text-brand-ink transition-all"
+    >
+      Allocate Capital
+    </button>
   </div>
 );
 
-export const FundingView = ({ onOpenAllocation, onViewProject }: { onOpenAllocation: (project: any) => void, onViewProject?: (project: any) => void }) => {
+export const FundingView = ({ onOpenAllocation }: { onOpenAllocation: (project: any) => void }) => {
   const projects = [
     {
       id: '1',
@@ -194,7 +186,6 @@ export const FundingView = ({ onOpenAllocation, onViewProject }: { onOpenAllocat
             key={project.id} 
             project={project} 
             onSelect={onOpenAllocation}
-            onView={onViewProject}
           />
         ))}
       </div>

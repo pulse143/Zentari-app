@@ -67,20 +67,20 @@ type TabId =
   | 'database' | 'agents' | 'verification' | 'poi' | 'api' 
   | 'design' | 'failures' | 'network-effects' | 'economy' | 'moat' 
   | 'global' | 'markets' | 'forensic' | 'governance' | 'dev-portal' 
-  | 'security' | 'roadmap' | 'documentation' | 'project-detail';
+  | 'security' | 'roadmap' | 'documentation';
 
 interface ViewConfig {
   id: TabId;
   icon: React.ElementType;
   label: string;
-  category: 'protocol' | 'impact' | 'dev' | 'ops' | 'hidden';
+  category: 'protocol' | 'impact' | 'dev' | 'ops';
   component: React.ElementType;
 }
 
 const VIEWS: ViewConfig[] = [
   { id: 'ledger', icon: Activity, label: 'Impact Ledger', category: 'ops', component: (props: any) => <LedgerView records={props.poiRecords || []} /> },
   { id: 'network', icon: Globe, label: 'Submit Evidence', category: 'ops', component: SubmitEvidenceView },
-  { id: 'funding', icon: Wallet, label: 'Funding', category: 'ops', component: (props: any) => <FundingView onOpenAllocation={props.onOpenAllocation} onViewProject={props.onViewProject} /> },
+  { id: 'funding', icon: Wallet, label: 'Funding', category: 'ops', component: (props: any) => <FundingView onOpenAllocation={props.onOpenAllocation} /> },
   { id: 'audit', icon: ShieldAlert, label: 'Risk Analysis', category: 'ops', component: RiskAnalysisView },
   { id: 'architecture', icon: Box, label: 'Architecture', category: 'protocol', component: SystemArchitectureView },
   { id: 'database', icon: Database, label: 'Data Schema', category: 'protocol', component: DataSchemaView },
@@ -101,7 +101,6 @@ const VIEWS: ViewConfig[] = [
   { id: 'security', icon: ShieldCheck, label: 'Security', category: 'ops', component: ProtocolSecurityView },
   { id: 'roadmap', icon: Flag, label: 'Roadmap', category: 'protocol', component: ProtocolRoadmapView },
   { id: 'documentation', icon: BookOpen, label: 'Documentation', category: 'protocol', component: DocumentationView },
-  { id: 'project-detail', icon: Globe, label: 'Project Detail', category: 'hidden', component: (props: any) => <ProjectDetailView project={props.project} /> },
 ];
 
 // --- Components ---
@@ -199,7 +198,7 @@ const IntentBar = ({ activeTab, onTabChange }: { activeTab: TabId, onTabChange: 
   );
 };
 
-const CommandPalette = ({ isOpen, onClose, onAction }: { isOpen: boolean, onClose: () => void, onAction: (tab: TabId) => void }) => (
+const CommandPalette = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => (
   <AnimatePresence>
     {isOpen && (
       <>
@@ -228,19 +227,12 @@ const CommandPalette = ({ isOpen, onClose, onAction }: { isOpen: boolean, onClos
             <div className="text-[10px] font-bold uppercase tracking-widest text-brand-muted px-4 py-2">Quick Actions</div>
             <div className="space-y-1">
               {[
-                { icon: Plus, label: 'Submit New Evidence', shortcut: 'E', tab: 'network' as TabId },
-                { icon: Wallet, label: 'Allocate Capital', shortcut: 'A', tab: 'funding' as TabId },
-                { icon: ShieldCheck, label: 'Verify Pending PoI', shortcut: 'V', tab: 'verification' as TabId },
-                { icon: Activity, label: 'View Protocol Health', shortcut: 'H', tab: 'ledger' as TabId }
+                { icon: Plus, label: 'Submit New Evidence', shortcut: 'E' },
+                { icon: Wallet, label: 'Allocate Capital', shortcut: 'A' },
+                { icon: ShieldCheck, label: 'Verify Pending PoI', shortcut: 'V' },
+                { icon: Activity, label: 'View Protocol Health', shortcut: 'H' }
               ].map((action, i) => (
-                <button 
-                  key={i} 
-                  onClick={() => {
-                    onAction(action.tab);
-                    onClose();
-                  }}
-                  className="w-full flex items-center justify-between p-4 hover:bg-white/5 rounded-2xl transition-colors group"
-                >
+                <button key={i} className="w-full flex items-center justify-between p-4 hover:bg-white/5 rounded-2xl transition-colors group">
                   <div className="flex items-center gap-4">
                     <div className="p-2 bg-white/5 rounded-lg group-hover:bg-brand-accent/20 group-hover:text-brand-accent transition-colors">
                       <action.icon className="w-5 h-5" />
@@ -394,7 +386,6 @@ export default function App() {
       <CommandPalette 
         isOpen={isCommandPaletteOpen} 
         onClose={() => setIsCommandPaletteOpen(false)} 
-        onAction={(tab) => setActiveTab(tab)}
       />
       
       <main className="pt-32 pb-32 px-8 max-w-7xl mx-auto">
@@ -408,15 +399,10 @@ export default function App() {
           >
             <ActiveView 
               poiRecords={poiRecords}
-              project={selectedProject}
               onOpenAllocation={(project: any) => {
                 setSelectedProject(project);
                 setIsAllocationModalOpen(true);
               }} 
-              onViewProject={(project: any) => {
-                setSelectedProject(project);
-                setActiveTab('project-detail');
-              }}
             />
           </motion.div>
         </AnimatePresence>
