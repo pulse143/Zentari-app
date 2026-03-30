@@ -87,6 +87,7 @@ export const SubmitEvidenceView = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [poiResult, setPoiResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const PROJECT_TYPES = [
     { id: 'Agriculture', icon: Globe, color: 'text-emerald-400' },
@@ -163,9 +164,9 @@ export const SubmitEvidenceView = () => {
 
       // Note: Firestore persistence is now handled by the backend for poi_records
       setStep(3);
-    } catch (error) {
+    } catch (error: any) {
       console.error("PoI Generation failed:", error);
-      alert("Verification failed. Please try again.");
+      setError(error.message || "Verification failed. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -189,6 +190,17 @@ export const SubmitEvidenceView = () => {
       </div>
 
       <AnimatePresence mode="wait">
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-rose-400/10 border border-rose-400/20 rounded-2xl flex items-center gap-3 text-rose-400 text-sm font-medium"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="ml-auto text-xs uppercase tracking-widest opacity-60 hover:opacity-100">Dismiss</button>
+          </motion.div>
+        )}
         {step === 1 && (
           <StepUpload onFileSelect={handleFileSelect} />
         )}

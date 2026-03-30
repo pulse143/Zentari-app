@@ -92,43 +92,7 @@ const EvidenceCard = ({ evidence }: any) => (
   </div>
 );
 
-export const ProjectDetailView = ({ project }: any) => {
-  const evidenceRecords = [
-    {
-      id: '1',
-      type: 'Satellite Imagery',
-      url: 'https://picsum.photos/seed/sat1/600/400',
-      timestamp: '2026-03-24 14:22',
-      status: 'verified',
-      aiFeedback: [
-        { label: 'Vegetation Index', confidence: 99.2 },
-        { label: 'Canopy Density', confidence: 98.4 }
-      ]
-    },
-    {
-      id: '2',
-      type: 'Ground Photo',
-      url: 'https://picsum.photos/seed/ground1/600/400',
-      timestamp: '2026-03-25 09:15',
-      status: 'verified',
-      aiFeedback: [
-        { label: 'Species Match', confidence: 96.5 },
-        { label: 'GPS Integrity', confidence: 99.8 }
-      ]
-    },
-    {
-      id: '3',
-      type: 'IoT Sensor Log',
-      url: 'https://picsum.photos/seed/sensor1/600/400',
-      timestamp: '2026-03-26 08:30',
-      status: 'pending',
-      aiFeedback: [
-        { label: 'Data Consistency', confidence: 94.2 },
-        { label: 'Node Consensus', confidence: 92.1 }
-      ]
-    }
-  ];
-
+export const ProjectDetailView = ({ project, evidenceRecords = [], onOpenAllocation }: any) => {
   return (
     <div className="space-y-16">
       <div className="flex items-center justify-between">
@@ -159,7 +123,10 @@ export const ProjectDetailView = ({ project }: any) => {
               </div>
             </div>
           </div>
-          <button className="px-12 py-6 bg-brand-paper text-brand-ink rounded-[2rem] font-bold uppercase tracking-widest text-xs hover:scale-[1.02] transition-transform">
+          <button 
+            onClick={() => onOpenAllocation?.(project)}
+            className="px-12 py-6 bg-brand-paper text-brand-ink rounded-[2rem] font-bold uppercase tracking-widest text-xs hover:scale-[1.02] transition-transform"
+          >
             Allocate Capital
           </button>
         </div>
@@ -176,9 +143,13 @@ export const ProjectDetailView = ({ project }: any) => {
               <button className="text-[10px] font-bold uppercase tracking-widest text-brand-muted hover:text-brand-paper transition-colors">Filter by Type</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {evidenceRecords.map((evidence) => (
+              {evidenceRecords.length > 0 ? evidenceRecords.map((evidence: any) => (
                 <EvidenceCard key={evidence.id} evidence={evidence} />
-              ))}
+              )) : (
+                <div className="col-span-full py-20 text-center border border-dashed border-white/5 rounded-[2rem]">
+                  <p className="text-brand-muted">No evidence records found for this project.</p>
+                </div>
+              )}
             </div>
           </div>
 

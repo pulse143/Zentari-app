@@ -2,16 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup as firebaseSignInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import * as firestore from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID
-};
+import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
@@ -57,6 +48,12 @@ export const limit = (n: number) =>
 export const where = (fieldPath: string, opStr: any, value: any) => 
   firestore.where(fieldPath, opStr, value);
 
+export const updateDoc = async (docRef: any, data: any) => 
+  firestore.updateDoc(docRef, data);
+
+export const increment = (n: number) => 
+  firestore.increment(n);
+
 export const serverTimestamp = () => firestore.serverTimestamp();
 
 export const getDocFromServer = async (docRef: any) => {
@@ -70,7 +67,6 @@ export const signInWithPopup = async (auth: any, provider: any) => {
   return firebaseSignInWithPopup(auth, provider);
 };
 
-// Auth Helpers
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => auth.signOut();
 

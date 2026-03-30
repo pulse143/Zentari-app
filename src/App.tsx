@@ -80,7 +80,7 @@ interface ViewConfig {
 const VIEWS: ViewConfig[] = [
   { id: 'ledger', icon: Activity, label: 'Impact Ledger', category: 'ops', component: (props: any) => <LedgerView records={props.poiRecords || []} /> },
   { id: 'network', icon: Globe, label: 'Submit Evidence', category: 'ops', component: SubmitEvidenceView },
-  { id: 'funding', icon: Wallet, label: 'Funding', category: 'ops', component: (props: any) => <FundingView onOpenAllocation={props.onOpenAllocation} onViewProject={props.onViewProject} /> },
+  { id: 'funding', icon: Wallet, label: 'Funding', category: 'ops', component: (props: any) => <FundingView projects={props.projects} onOpenAllocation={props.onOpenAllocation} onViewProject={props.onViewProject} /> },
   { id: 'audit', icon: ShieldAlert, label: 'Risk Analysis', category: 'ops', component: RiskAnalysisView },
   { id: 'architecture', icon: Box, label: 'Architecture', category: 'protocol', component: SystemArchitectureView },
   { id: 'database', icon: Database, label: 'Data Schema', category: 'protocol', component: DataSchemaView },
@@ -101,7 +101,7 @@ const VIEWS: ViewConfig[] = [
   { id: 'security', icon: ShieldCheck, label: 'Security', category: 'ops', component: ProtocolSecurityView },
   { id: 'roadmap', icon: Flag, label: 'Roadmap', category: 'protocol', component: ProtocolRoadmapView },
   { id: 'documentation', icon: BookOpen, label: 'Documentation', category: 'protocol', component: DocumentationView },
-  { id: 'project-detail', icon: Globe, label: 'Project Detail', category: 'hidden', component: (props: any) => <ProjectDetailView project={props.project} /> },
+  { id: 'project-detail', icon: Globe, label: 'Project Detail', category: 'hidden', component: (props: any) => <ProjectDetailView project={props.project} evidenceRecords={props.poiRecords?.filter((r: any) => r.projectId === props.project?.id)} onOpenAllocation={props.onOpenAllocation} /> },
 ];
 
 // --- Components ---
@@ -315,6 +315,8 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [poiRecords, setPoiRecords] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Real-time PoI Ledger
   useEffect(() => {
@@ -327,8 +329,30 @@ export default function App() {
         ...doc.data()
       }));
       setPoiRecords(records);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, path);
+    }, (err) => {
+      console.error("PoI Fetch Error:", err);
+      setError("Failed to fetch impact records.");
+      handleFirestoreError(err, OperationType.GET, path);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time Projects
+  useEffect(() => {
+    const path = 'projects';
+    const q = query(collection(db, path), limit(20));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const projs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setProjects(projs);
+    }, (err) => {
+      console.error("Projects Fetch Error:", err);
+      setError("Failed to fetch projects.");
+      handleFirestoreError(err, OperationType.GET, path);
     });
 
     return () => unsubscribe();
@@ -336,29 +360,35 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Check if user exists in Firestore
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          setUser(userDoc.data());
+      try {
+        if (firebaseUser) {
+          // Check if user exists in Firestore
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if ((userDoc as any).exists()) {
+            setUser(userDoc.data());
+          } else {
+            // Create new Z-ID profile
+            const newUser = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              role: 'node',
+              trust_score: 50,
+              createdAt: new Date().toISOString()
+            };
+            await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+            setUser(newUser);
+          }
         } else {
-          // Create new Z-ID profile
-          const newUser = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            role: 'node',
-            trust_score: 50,
-            createdAt: new Date().toISOString()
-          };
-          await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-          setUser(newUser);
+          setUser(null);
         }
-      } else {
-        setUser(null);
+      } catch (err) {
+        console.error("Auth sync error:", err);
+        setError("Authentication synchronization failed.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -406,8 +436,16 @@ export default function App() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
           >
+            {error && (
+              <div className="mb-8 p-4 bg-rose-400/10 border border-rose-400/20 rounded-2xl flex items-center gap-3 text-rose-400 text-sm font-medium">
+                <AlertCircle className="w-5 h-5" />
+                <span>{error}</span>
+                <button onClick={() => setError(null)} className="ml-auto text-xs uppercase tracking-widest opacity-60 hover:opacity-100">Dismiss</button>
+              </div>
+            )}
             <ActiveView 
               poiRecords={poiRecords}
+              projects={projects}
               project={selectedProject}
               onOpenAllocation={(project: any) => {
                 setSelectedProject(project);
