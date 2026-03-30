@@ -5,7 +5,6 @@ import {
   Wallet, 
   TrendingUp, 
   ShieldCheck, 
-  AlertCircle,
   Zap, 
   ArrowRight, 
   ChevronRight, 
@@ -53,48 +52,17 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-import { db, auth, doc, updateDoc, increment, collection, addDoc, serverTimestamp, handleFirestoreError, OperationType } from '../lib/firebase';
-
 export const AllocationModal = ({ isOpen, onClose, project }: any) => {
   const [amount, setAmount] = useState(10000);
   const [isAllocating, setIsAllocating] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [txId, setTxId] = useState<string | null>(null);
 
-  const handleAllocate = async () => {
-    if (!project || !auth.currentUser) return;
-    
+  const handleAllocate = () => {
     setIsAllocating(true);
-    setError(null);
-    
-    try {
-      // 1. Update project funding
-      const projectRef = doc(db, 'projects', project.id);
-      await updateDoc(projectRef, {
-        fundingRaised: increment(amount)
-      });
-
-      // 2. Create transaction record
-      const txRef = await addDoc(collection(db, 'transactions'), {
-        userId: auth.currentUser.uid,
-        projectId: project.id,
-        projectName: project.name,
-        amount: amount,
-        timestamp: serverTimestamp(),
-        type: 'allocation',
-        status: 'completed'
-      });
-
-      setTxId(txRef.id);
-      setIsComplete(true);
-    } catch (err: any) {
-      console.error("Allocation failed:", err);
-      setError("Failed to process allocation. Please try again.");
-      handleFirestoreError(err, OperationType.WRITE, `projects/${project.id}`);
-    } finally {
+    setTimeout(() => {
       setIsAllocating(false);
-    }
+      setIsComplete(true);
+    }, 2000);
   };
 
   if (!isOpen) return null;
@@ -137,12 +105,6 @@ export const AllocationModal = ({ isOpen, onClose, project }: any) => {
                 </div>
 
                 <div className="space-y-8">
-                  {error && (
-                    <div className="p-4 bg-rose-400/10 border border-rose-400/20 rounded-2xl flex items-center gap-3 text-rose-400 text-sm font-medium">
-                      <AlertCircle className="w-5 h-5" />
-                      <span>{error}</span>
-                    </div>
-                  )}
                   <div className="p-10 border border-white/5 rounded-[2.5rem] bg-white/[0.02] space-y-8">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-brand-muted">Allocation Amount</span>
@@ -215,7 +177,7 @@ export const AllocationModal = ({ isOpen, onClose, project }: any) => {
                 <div className="w-full p-8 border border-white/5 rounded-[2rem] bg-white/[0.02] space-y-4">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-brand-muted">Transaction ID</span>
-                    <span className="font-mono text-[10px]">{txId || '0x8291...X42'}</span>
+                    <span className="font-mono">0x8291...X42</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-brand-muted">Protocol Fee</span>

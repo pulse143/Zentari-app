@@ -128,7 +128,46 @@ const ProjectAllocationCard = ({ project, onSelect, onView }: any) => (
   </div>
 );
 
-export const FundingView = ({ projects = [], onOpenAllocation, onViewProject }: { projects?: any[], onOpenAllocation: (project: any) => void, onViewProject?: (project: any) => void }) => {
+export const FundingView = ({ onOpenAllocation, onViewProject }: { onOpenAllocation: (project: any) => void, onViewProject?: (project: any) => void }) => {
+  const projects = [
+    {
+      id: '1',
+      name: 'Global Reforestation',
+      location: 'Regional Sector 4',
+      trustScore: 98.4,
+      fundingGoal: 500000,
+      fundingRaised: 320000,
+      impactMetrics: [
+        { label: 'Activities Verified', value: '12,400', change: 12 },
+        { label: 'Impact Units', value: '450t', change: 8 }
+      ]
+    },
+    {
+      id: '2',
+      name: 'Zambia Clean Water',
+      location: 'Lusaka District 12',
+      trustScore: 92.1,
+      fundingGoal: 250000,
+      fundingRaised: 180000,
+      impactMetrics: [
+        { label: 'Wells Built', value: '12', change: 4 },
+        { label: 'People Served', value: '5,000', change: 15 }
+      ]
+    },
+    {
+      id: '3',
+      name: 'Tanzania Solar Grid',
+      location: 'Dodoma Sector 2',
+      trustScore: 88.5,
+      fundingGoal: 750000,
+      fundingRaised: 420000,
+      impactMetrics: [
+        { label: 'KWh Generated', value: '45,000', change: 22 },
+        { label: 'Homes Powered', value: '1,200', change: 18 }
+      ]
+    }
+  ];
+
   return (
     <div className="space-y-12">
       <div className="flex items-center justify-between">
@@ -150,18 +189,14 @@ export const FundingView = ({ projects = [], onOpenAllocation, onViewProject }: 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {projects.length > 0 ? projects.map((project) => (
+        {projects.map((project) => (
           <ProjectAllocationCard 
             key={project.id} 
             project={project} 
             onSelect={onOpenAllocation}
             onView={onViewProject}
           />
-        )) : (
-          <div className="col-span-full py-20 text-center border border-dashed border-white/5 rounded-[3rem]">
-            <p className="text-brand-muted">No projects found in the protocol ledger.</p>
-          </div>
-        )}
+        ))}
       </div>
 
       <div className="p-12 border border-brand-border rounded-[3rem] bg-brand-accent/5 border-brand-accent/20 space-y-8 relative overflow-hidden">
