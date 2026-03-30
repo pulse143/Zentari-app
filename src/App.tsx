@@ -101,7 +101,7 @@ const VIEWS: ViewConfig[] = [
   { id: 'security', icon: ShieldCheck, label: 'Security', category: 'ops', component: ProtocolSecurityView },
   { id: 'roadmap', icon: Flag, label: 'Roadmap', category: 'protocol', component: ProtocolRoadmapView },
   { id: 'documentation', icon: BookOpen, label: 'Documentation', category: 'protocol', component: DocumentationView },
-  { id: 'project-detail', icon: Globe, label: 'Project Detail', category: 'hidden', component: (props: any) => <ProjectDetailView project={props.project} onOpenAllocation={props.onOpenAllocation} /> },
+  { id: 'project-detail', icon: Globe, label: 'Project Detail', category: 'hidden', component: (props: any) => <ProjectDetailView project={props.project} /> },
 ];
 
 // --- Components ---

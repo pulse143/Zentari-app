@@ -92,7 +92,7 @@ const EvidenceCard = ({ evidence }: any) => (
   </div>
 );
 
-export const ProjectDetailView = ({ project, onOpenAllocation }: any) => {
+export const ProjectDetailView = ({ project }: any) => {
   const evidenceRecords = [
     {
       id: '1',
@@ -159,10 +159,7 @@ export const ProjectDetailView = ({ project, onOpenAllocation }: any) => {
               </div>
             </div>
           </div>
-          <button 
-            onClick={() => onOpenAllocation?.(project)}
-            className="px-12 py-6 bg-brand-paper text-brand-ink rounded-[2rem] font-bold uppercase tracking-widest text-xs hover:scale-[1.02] transition-transform"
-          >
+          <button className="px-12 py-6 bg-brand-paper text-brand-ink rounded-[2rem] font-bold uppercase tracking-widest text-xs hover:scale-[1.02] transition-transform">
             Allocate Capital
           </button>
         </div>

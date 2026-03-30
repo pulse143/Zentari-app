@@ -2,51 +2,22 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup as firebaseSignInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import * as firestore from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import firebaseConfig from '../../firebase-applet-config.json';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID
+};
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
 const db = firestore.getFirestore(app, firebaseConfig.firestoreDatabaseId);
 const auth = getAuth(app);
 const storage = getStorage(app);
-
-const isMock = firebaseConfig.apiKey === "mock-api-key";
-
-// Mock Data
-const MOCK_POI_RECORDS = [
-  {
-    id: 'poi_mock_1',
-    evidence_id: 'ev_mock_1',
-    user_id: 'mock_user',
-    poi_score: 88.4,
-    verification_data: {
-      authenticity_score: 0.95,
-      context_match_score: 0.92,
-      detected_objects: ['sapling', 'forest', 'soil'],
-      risk_assessment: { level: 'low', flags: [] },
-      reasoning: 'High-resolution satellite imagery confirms reforestation activity.'
-    },
-    block_number: 2849102,
-    timestamp: { toDate: () => new Date() },
-    metadata: 'Reforestation verification in Amazon Basin.'
-  },
-  {
-    id: 'poi_mock_2',
-    evidence_id: 'ev_mock_2',
-    user_id: 'mock_user',
-    poi_score: 92.1,
-    verification_data: {
-      authenticity_score: 0.98,
-      context_match_score: 0.95,
-      detected_objects: ['solar_panel', 'energy_grid'],
-      risk_assessment: { level: 'low', flags: [] },
-      reasoning: 'IoT sensor data matches reported energy production.'
-    },
-    block_number: 2849105,
-    timestamp: { toDate: () => new Date(Date.now() - 3600000) },
-    metadata: 'Solar energy production audit in Sahara.'
-  }
-];
 
 // Firestore functions
 export const collection = (database: any, path: string) => {
@@ -58,32 +29,14 @@ export const doc = (database: any, path: string, ...pathSegments: string[]) => {
 };
 
 export const getDoc = async (docRef: any) => {
-  if (isMock) {
-    if (docRef.path.startsWith('users/')) {
-      return {
-        exists: () => true,
-        data: () => ({
-          displayName: 'Demo User',
-          email: 'demo@zentari.io',
-          photoURL: 'https://picsum.photos/seed/demo/200/200',
-          role: 'node',
-          trust_score: 75,
-          createdAt: new Date().toISOString()
-        })
-      };
-    }
-    return { exists: () => false, data: () => null };
-  }
   return firestore.getDoc(docRef);
 };
 
 export const setDoc = async (docRef: any, data: any) => {
-  if (isMock) return Promise.resolve();
   return firestore.setDoc(docRef, data);
 };
 
 export const addDoc = async (colRef: any, data: any) => {
-  if (isMock) return Promise.resolve({ id: 'mock_id' });
   return firestore.addDoc(colRef, data);
 };
 
@@ -92,20 +45,6 @@ export const query = (colRef: any, ...queryConstraints: any[]) => {
 };
 
 export const onSnapshot = (queryOrRef: any, onNext: any, onError?: any) => {
-  if (isMock) {
-    const path = queryOrRef.path || (queryOrRef._query && queryOrRef._query.path.segments.join('/'));
-    if (path === 'poi_records') {
-      onNext({
-        docs: MOCK_POI_RECORDS.map(record => ({
-          id: record.id,
-          data: () => record
-        }))
-      });
-      return () => {};
-    }
-    onNext({ docs: [] });
-    return () => {};
-  }
   return firestore.onSnapshot(queryOrRef, onNext, onError);
 };
 
@@ -121,7 +60,6 @@ export const where = (fieldPath: string, opStr: any, value: any) =>
 export const serverTimestamp = () => firestore.serverTimestamp();
 
 export const getDocFromServer = async (docRef: any) => {
-  if (isMock) return getDoc(docRef);
   return firestore.getDocFromServer(docRef);
 };
 
@@ -129,20 +67,10 @@ export { db, auth, storage, ref, uploadBytes, getDownloadURL };
 export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithPopup = async (auth: any, provider: any) => {
-  if (isMock) {
-    return {
-      user: {
-        uid: 'mock_user_id',
-        displayName: 'Demo User',
-        email: 'demo@zentari.io',
-        photoURL: 'https://picsum.photos/seed/demo/200/200',
-        getIdToken: () => Promise.resolve('mock_token')
-      }
-    };
-  }
   return firebaseSignInWithPopup(auth, provider);
 };
 
+// Auth Helpers
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => auth.signOut();
 
