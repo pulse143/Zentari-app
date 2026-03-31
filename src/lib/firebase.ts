@@ -2,12 +2,24 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup as firebaseSignInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import * as firestore from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfigImport from '../../firebase-applet-config.json';
 
 // Initialize Firebase SDK
 // LIVE DATA: This configuration is provisioned via AI Studio
+// We use environment variables for security, falling back to the config file if available
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (firebaseConfigImport as any).apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (firebaseConfigImport as any).authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || (firebaseConfigImport as any).projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || (firebaseConfigImport as any).storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || (firebaseConfigImport as any).messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || (firebaseConfigImport as any).appId,
+};
+
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || (firebaseConfigImport as any).firestoreDatabaseId;
+
 const app = initializeApp(firebaseConfig);
-const db = firestore.getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const db = firestore.getFirestore(app, firestoreDatabaseId);
 const auth = getAuth(app);
 const storage = getStorage(app);
 
