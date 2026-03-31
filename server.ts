@@ -7,46 +7,47 @@ import { GoogleGenAI, Type } from "@google/genai";
 import * as admin from "firebase-admin";
 
 // Initialize Firebase Admin
-let db: any;
-let isMock = true; // Default to MOCK mode for preview stability
+let db: admin.firestore.Firestore | null = null;
 
 try {
   if (process.env.FIREBASE_CONFIG) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    }
+    db = admin.firestore();
+    console.log("Firebase Admin initialized successfully.");
+  } else {
+    // Fallback to default credentials (e.g. in Cloud Run)
     if (!admin.apps.length) {
       admin.initializeApp();
     }
     db = admin.firestore();
-    isMock = false;
-  } else {
-    throw new Error("No Firebase config found");
+    console.log("Firebase Admin initialized with default credentials.");
   }
 } catch (error) {
-  console.warn("Firebase Admin failed to initialize or not configured. Running in MOCK mode.");
-  isMock = true;
-  db = {
-    collection: () => ({
-      doc: () => ({ 
-        get: async () => ({ exists: false, data: () => null }), 
-        set: async () => { console.log("[MOCK DB] setDoc called"); }, 
-        update: async () => { console.log("[MOCK DB] updateDoc called"); } 
-      }),
-      limit: () => ({ get: async () => ({ docs: [] }) }),
-      orderBy: () => ({ limit: () => ({ get: async () => ({ docs: [] }) }) })
-    })
-  };
+  console.error("Error initializing Firebase Admin (continuing in demo mode):", error);
+  // Do not exit, allow Vite to serve the frontend
 }
 
 // Initialize Gemini
-// TODO: Enable real Gemini API when billing is active
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+
+if (!genAI) {
+  console.warn("GEMINI_API_KEY is missing. AI features will be disabled.");
+}
 
 // --- MIDDLEWARE ---
 
 const verifyToken = async (req: any, res: any, next: any) => {
-  if (isMock) {
-    req.user = { uid: 'mock-uid', email: 'mock@example.com' };
+  // DEMO MODE: If Firebase Admin is not initialized, allow all requests
+  if (!db) {
+    req.user = { uid: "demo-user", email: "demo@zentari.io", displayName: "Demo User" };
     return next();
   }
+
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: "Unauthorized: No token provided" });
@@ -78,15 +79,18 @@ const GeminiService = {
     
     Return a structured JSON object with forensic precision.`;
 
-    // MOCK MODE: Default to mock response for preview stability if no API key
-    if (isMock || !genAI) {
-      console.log(`[MOCK AI] Verifying ${projectType} evidence`);
+    // REAL MODE: Use Gemini API
+    if (!genAI) {
+      // MOCK MODE: Return a mock verification if Gemini is not configured
       return {
-        authenticity_score: 0.93,
-        context_match_score: 0.90,
-        detected_objects: ["Verified Activity", "Contextual Evidence", projectType],
-        risk_assessment: { level: "low", flags: [] },
-        reasoning: "Mock verification: Evidence appears authentic and matches the stated project context."
+        authenticity_score: 0.95,
+        context_match_score: 0.92,
+        detected_objects: ["tree", "solar panel", "clean water"],
+        risk_assessment: {
+          level: "low",
+          flags: []
+        },
+        reasoning: "Evidence appears authentic and matches the project context (Demo Mode)."
       };
     }
 
@@ -126,14 +130,8 @@ const GeminiService = {
 
       return JSON.parse(response.text);
     } catch (error) {
-      console.warn("Gemini verification failed. Returning mock data.");
-      return {
-        authenticity_score: 0.93,
-        context_match_score: 0.90,
-        detected_objects: ["Verified Activity"],
-        risk_assessment: { level: "low", flags: [] },
-        reasoning: "Fallback mock verification: Image appears authentic."
-      };
+      console.error("Gemini verification failed:", error);
+      throw error;
     }
   }
 };
@@ -162,7 +160,7 @@ async function startServer() {
   // --- API ROUTES ---
 
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+    res.json({ status: "ok", timestamp: new Date().toISOString(), demo: !db });
   });
 
   // 1. Evidence Submission & Verification
@@ -192,12 +190,15 @@ async function startServer() {
   // 2. PoI Generation & Persistence
   app.post("/api/poi/generate", verifyToken, async (req: any, res) => {
     try {
-      const { evidence_id, verification, metadata } = req.body;
+      const { evidence_id, verification, metadata, storage_url } = req.body;
       const uid = req.user.uid;
 
       // Fetch user trust score from Firestore
-      const userDoc = await db.collection('users').doc(uid).get();
-      const userTrust = userDoc.exists ? (userDoc.data()?.trust_score || 50) : 50;
+      let userTrust = 50;
+      if (db) {
+        const userDoc = await db.collection('users').doc(uid).get();
+        userTrust = userDoc.exists ? (userDoc.data()?.trust_score || 50) : 50;
+      }
 
       const poi_score = PoIService.generateScore(verification, userTrust);
       const poi_id = `poi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -210,15 +211,16 @@ async function startServer() {
         poi_score,
         verification_data: verification,
         block_number,
-        timestamp: isMock ? new Date().toISOString() : admin.firestore.FieldValue.serverTimestamp(),
-        metadata: metadata || ""
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        metadata: metadata || "",
+        storage_url: storage_url || ""
       };
 
-      // Persist to Firestore securely from backend
-      await db.collection('poi_records').doc(poi_id).set(poiRecord);
+      // Persist to Firestore securely from backend if available
+      if (db) {
+        await db.collection('poi_records').doc(poi_id).set(poiRecord);
 
-      // Update user trust score slightly
-      if (!isMock) {
+        // Update user trust score slightly
         await db.collection('users').doc(uid).update({
           trust_score: admin.firestore.FieldValue.increment(0.1)
         });
@@ -235,12 +237,24 @@ async function startServer() {
     }
   });
 
-  // 3. Projects API (Real Firestore fetch)
+  // 3. Projects API (Real Firestore fetch with mock fallback)
   app.get("/api/projects", async (req, res) => {
     try {
-      const snapshot = await db.collection('projects').limit(10).get();
-      const projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      res.json(projects);
+      if (db) {
+        const snapshot = await db.collection('projects').limit(10).get();
+        if (!snapshot.empty) {
+          const projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          return res.json(projects);
+        }
+      }
+      
+      // Fallback Mock Projects
+      const mockProjects = [
+        { id: 'p1', title: 'Amazon Reforestation', description: 'Restoring 500 hectares of rainforest.', status: 'active', owner_id: 'demo-owner' },
+        { id: 'p2', title: 'Clean Water Initiative', description: 'Building solar-powered wells in rural areas.', status: 'active', owner_id: 'demo-owner' },
+        { id: 'p3', title: 'Solar Education Hub', description: 'Equipping schools with sustainable energy.', status: 'completed', owner_id: 'demo-owner' }
+      ];
+      res.json(mockProjects);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch projects" });
     }

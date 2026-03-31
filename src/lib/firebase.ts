@@ -5,100 +5,70 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase SDK
-let app, db: any, auth: any, storage: any;
-const isMock = firebaseConfig.apiKey === "mock-api-key";
+// LIVE DATA: This configuration is provisioned via AI Studio
+const app = initializeApp(firebaseConfig);
+const db = firestore.getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const auth = getAuth(app);
+const storage = getStorage(app);
 
-if (!isMock) {
-  app = initializeApp(firebaseConfig);
-  db = firestore.getFirestore(app, firebaseConfig.firestoreDatabaseId);
-  auth = getAuth(app);
-  storage = getStorage(app);
-} else {
-  console.warn("Firebase is running in MOCK mode. Set up real Firebase in Settings.");
-  app = {};
-  db = { 
-    _isMock: true,
-    collection: () => ({ 
-      doc: () => ({ get: async () => ({ exists: () => false, data: () => null }), set: async () => {} }),
-      where: () => ({ orderBy: () => ({ limit: () => ({ onSnapshot: (cb: any) => { cb({ docs: [] }); return () => {}; } }) }) })
-    }) 
-  };
-  auth = { 
-    currentUser: { uid: 'mock-uid', displayName: 'Mock User', email: 'mock@example.com', photoURL: null },
-    onAuthStateChanged: (cb: any) => { 
-      setTimeout(() => cb({ uid: 'mock-uid', displayName: 'Mock User', email: 'mock@example.com', photoURL: null, getIdToken: async () => "mock-token" }), 100); 
-      return () => {}; 
-    },
-    signOut: async () => {} 
-  };
-  storage = {};
-}
-
-// Mock Firestore functions
+// Firestore functions
+// LIVE DATA: Standard Firestore operations
 export const collection = (database: any, path: string) => {
-  if (isMock) return { _path: path, _isMock: true };
   return firestore.collection(database, path);
 };
 
 export const doc = (database: any, path: string, ...pathSegments: string[]) => {
-  if (isMock) return { _path: path, _segments: pathSegments, _isMock: true };
   return firestore.doc(database, path, ...pathSegments);
 };
 
 export const getDoc = async (docRef: any) => {
-  if (isMock) return { exists: () => false, data: () => null };
   return firestore.getDoc(docRef);
 };
 
 export const setDoc = async (docRef: any, data: any) => {
-  if (isMock) return;
   return firestore.setDoc(docRef, data);
 };
 
 export const addDoc = async (colRef: any, data: any) => {
-  if (isMock) return { id: 'mock-id' };
   return firestore.addDoc(colRef, data);
 };
 
 export const query = (colRef: any, ...queryConstraints: any[]) => {
-  if (isMock) return { _colRef: colRef, _constraints: queryConstraints, _isMock: true };
   return firestore.query(colRef, ...queryConstraints);
 };
 
 export const onSnapshot = (queryOrRef: any, onNext: any, onError?: any) => {
-  if (isMock) {
-    setTimeout(() => onNext({ docs: [] }), 100);
-    return () => {};
-  }
   return firestore.onSnapshot(queryOrRef, onNext, onError);
 };
 
 export const orderBy = (fieldPath: string, directionStr?: any) => 
-  isMock ? { type: 'orderBy', fieldPath, directionStr } : firestore.orderBy(fieldPath, directionStr);
+  firestore.orderBy(fieldPath, directionStr);
 
 export const limit = (n: number) => 
-  isMock ? { type: 'limit', n } : firestore.limit(n);
+  firestore.limit(n);
 
 export const where = (fieldPath: string, opStr: any, value: any) => 
-  isMock ? { type: 'where', fieldPath, opStr, value } : firestore.where(fieldPath, opStr, value);
-export const serverTimestamp = () => isMock ? new Date() : firestore.serverTimestamp();
+  firestore.where(fieldPath, opStr, value);
+
+export const updateDoc = async (docRef: any, data: any) => 
+  firestore.updateDoc(docRef, data);
+
+export const increment = (n: number) => 
+  firestore.increment(n);
+
+export const serverTimestamp = () => firestore.serverTimestamp();
+
 export const getDocFromServer = async (docRef: any) => {
-  if (isMock) return { exists: () => false, data: () => null };
   return firestore.getDocFromServer(docRef);
 };
 
-export { db, auth, storage, isMock };
+export { db, auth, storage, ref, uploadBytes, getDownloadURL };
 export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithPopup = async (auth: any, provider: any) => {
-  if (isMock) {
-    console.log("Mock sign in triggered");
-    return { user: auth.currentUser };
-  }
   return firebaseSignInWithPopup(auth, provider);
 };
 
-// Auth Helpers
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => auth.signOut();
 
@@ -156,7 +126,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Connection Test
 async function testConnection() {
-  if (isMock) return;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
